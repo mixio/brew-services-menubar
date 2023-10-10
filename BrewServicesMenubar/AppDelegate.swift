@@ -95,94 +95,93 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Update menu of services
     //
     func updateMenu(refreshing: Bool = false, notFound: Bool = false, error: Bool = false) {
-        statusMenu.removeAllItems()
-
-        if notFound {
-            let item = NSMenuItem.init(title: "Homebrew not found", action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            statusMenu.addItem(item)
-        }
-        else if error {
-            let item = NSMenuItem.init(title: "Homebrew error", action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            statusMenu.addItem(item)
-        }
-        else if let services = services {
-            let user = NSUserName()
-            for service in services {
-                let item = NSMenuItem.init(title: service.name, action: nil, keyEquivalent: "")
-
-                if service.state == "started" {
-                    item.state = NSControl.StateValue.on
-                } else if service.state == "stopped"  || service.state == "none" {
-                    item.state = NSControl.StateValue.off
-                } else {
-                    item.state = NSControl.StateValue.mixed
-                }
-
-                if service.user != "" && service.user != user {
-                    item.isEnabled = false
-                }
-
-                if item.isEnabled {
-                    item.action = #selector(AppDelegate.handleClick(_:))
-                }
-
-                statusMenu.addItem(item)
-
-                let altItem = NSMenuItem.init(title: "Restart "+service.name, action: #selector(AppDelegate.handleRestartClick(_:)), keyEquivalent: "")
-                altItem.representedObject = service
-                altItem.state = item.state
-                altItem.isEnabled = item.isEnabled
-                altItem.isAlternate = true
-                altItem.isHidden = true
-                altItem.keyEquivalentModifierMask = .option
-                statusMenu.addItem(altItem)
-            }
-            if services.count == 0 {
-                let item = NSMenuItem.init(title: "No services available", action: nil, keyEquivalent: "")
+        DispatchQueue.main.async {
+            self.statusMenu.removeAllItems()
+            
+            if notFound {
+                let item = NSMenuItem.init(title: "Homebrew not found", action: nil, keyEquivalent: "")
                 item.isEnabled = false
-                statusMenu.addItem(item)
+                self.statusMenu.addItem(item)
             }
-            else {
-                statusMenu.addItem(.separator())
-                statusMenu.addItem(
-                    .init(title: "Start all", action:#selector(AppDelegate.handleStartAll(_:)), keyEquivalent: "s")
-                )
-                statusMenu.addItem(
-                    .init(title: "Stop all", action:#selector(AppDelegate.handleStopAll(_:)), keyEquivalent: "x")
-                )
-                statusMenu.addItem(
-                    .init(title: "Restart all", action:#selector(AppDelegate.handleRestartAll(_:)), keyEquivalent: "r")
-                )
+            else if error {
+                let item = NSMenuItem.init(title: "Homebrew error", action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                self.statusMenu.addItem(item)
             }
-        }
-
-        statusMenu.addItem(.separator())
-        statusMenu.addItem(
-            .init(title: "Quit", action:#selector(AppDelegate.handleQuit(_:)), keyEquivalent: "q")
-        )
-
-        if refreshing {
-            statusMenu.addItem(.separator())
-            let item = NSMenuItem.init(title: "Refreshing...", action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            statusMenu.addItem(item)
+            else if let services = self.services {
+                let user = NSUserName()
+                for service in services {
+                    let item = NSMenuItem.init(title: service.name, action: nil, keyEquivalent: "")
+                    
+                    if service.state == "started" {
+                        item.state = NSControl.StateValue.on
+                    } else if service.state == "stopped"  || service.state == "none" {
+                        item.state = NSControl.StateValue.off
+                    } else {
+                        item.state = NSControl.StateValue.mixed
+                    }
+                    
+                    if service.user != "" && service.user != user {
+                        item.isEnabled = false
+                    }
+                    
+                    if item.isEnabled {
+                        item.action = #selector(AppDelegate.handleClick(_:))
+                    }
+                    
+                    self.statusMenu.addItem(item)
+                    
+                    let altItem = NSMenuItem.init(title: "Restart "+service.name, action: #selector(AppDelegate.handleRestartClick(_:)), keyEquivalent: "")
+                    altItem.representedObject = service
+                    altItem.state = item.state
+                    altItem.isEnabled = item.isEnabled
+                    altItem.isAlternate = true
+                    altItem.isHidden = true
+                    altItem.keyEquivalentModifierMask = .option
+                    self.statusMenu.addItem(altItem)
+                }
+                if services.count == 0 {
+                    let item = NSMenuItem.init(title: "No services available", action: nil, keyEquivalent: "")
+                    item.isEnabled = false
+                    self.statusMenu.addItem(item)
+                }
+                else {
+                    self.statusMenu.addItem(.separator())
+                    self.statusMenu.addItem(
+                        .init(title: "Start all", action:#selector(AppDelegate.handleStartAll(_:)), keyEquivalent: "s")
+                    )
+                    self.statusMenu.addItem(
+                        .init(title: "Stop all", action:#selector(AppDelegate.handleStopAll(_:)), keyEquivalent: "x")
+                    )
+                    self.statusMenu.addItem(
+                        .init(title: "Restart all", action:#selector(AppDelegate.handleRestartAll(_:)), keyEquivalent: "r")
+                    )
+                }
+            }
+            
+            self.statusMenu.addItem(.separator())
+            self.statusMenu.addItem(
+                .init(title: "Quit", action:#selector(AppDelegate.handleQuit(_:)), keyEquivalent: "q")
+            )
+            
+            if refreshing {
+                self.statusMenu.addItem(.separator())
+                let item = NSMenuItem.init(title: "Refreshing...", action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                self.statusMenu.addItem(item)
+            }
         }
     }
 
     func queryServicesAndUpdateMenu() {
         do {
             let launchPath = try self.brewExecutable()
-
-            updateMenu(refreshing: true)
+            self.updateMenu(refreshing: true)
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
                     let result = try self.serviceStates(launchPath: launchPath)
-                    DispatchQueue.main.async {
-                        self.services = result
-                        self.updateMenu()
-                    }
+                    self.services = result
+                    self.updateMenu()
                 } catch {
                     self.updateMenu(error: true)
                 }
@@ -223,10 +222,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 task.launchPath = try self.brewExecutable()
             } catch {
-                let alert = NSAlert.init()
-                alert.alertStyle = .critical
-                alert.messageText = "Error locating Homebrew"
-                alert.runModal()
+                DispatchQueue.main.async {
+                    let alert = NSAlert.init()
+                    alert.alertStyle = .critical
+                    alert.messageText = "Error locating Homebrew"
+                    alert.runModal()
+                }
                 return
             }
             task.arguments = ["services", state, name]
